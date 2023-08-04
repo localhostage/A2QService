@@ -1,17 +1,18 @@
 using System.Diagnostics;
 using System.Text.RegularExpressions;
-using WebApplication1.Model;
+using A2QService.Model;
 
-namespace WebApplication1.Managers;
+namespace A2QService.Managers;
 
 public class JobManager
 {
+    public ConfigManager ConfigManager { get; set; }
     private Queue<Job> JobQueue { get; } = new Queue<Job>();
-
     public int TotalJobs => JobQueue.Count;
     
-    public JobManager()
+    public JobManager(ConfigManager configManager)
     {
+        this.ConfigManager = configManager;
     }
 
     public string AddJob(string url)
@@ -72,19 +73,21 @@ public class JobManager
         // run task in new thread
         var task = Task.Run(() =>
         {
+            var args =
+                $"-f bv+ba -P \"{ConfigManager.Config.DownloadPath}\" -P \"temp:tmp\" -P \"subtitle:subs\" --embed-subs --write-auto-sub --sub-lang \"en.*\" {job.Url}";
+                
             // Create new process start info
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
-                FileName = "D:\\Tools\\yt-dlp.exe",
-                Arguments =
-                    $"-f bv+ba -P D:\\Output -P \"temp:tmp\" -P \"subtitle:subs\" --embed-subs --write-auto-sub --sub-lang \"en.*\" {job.Url}", 
+                FileName = ConfigManager.Config.YtDlPath,
+                Arguments = args, 
                 UseShellExecute = false, 
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true 
             };
             
-            startInfo.EnvironmentVariables["PATH"] += @";D:\Tools\ffmpeg-2023-07-19-git-efa6cec759-full_build\bin";
+            startInfo.EnvironmentVariables["PATH"] += @$";{ConfigManager.Config.FfmpegPath}";
 
             // Create a new process 
             Process process = new Process

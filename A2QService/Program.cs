@@ -1,15 +1,17 @@
-using WebApplication1.Managers;
+using A2QService.Managers;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-var jobManager = new JobManager();
+var configManager = new ConfigManager();
+var jobManager = new JobManager(configManager);
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton(jobManager);
+builder.Services.AddSingleton(configManager);
 
 var app = builder.Build();
 

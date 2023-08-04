@@ -1,0 +1,5 @@
+{
+  "ytDlPath": "D:\\Tools\\yt-dlp.exe",
+  "downloadPath": "D:\\Output",
+  "ffmpegPath": "D:\\Tools\\ffmpeg-2023-07-19-git-efa6cec759-full_build\\bin"
+}

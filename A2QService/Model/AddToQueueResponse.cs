@@ -1,4 +1,4 @@
-namespace WebApplication1.Model;
+namespace A2QService.Model;
 
 public class AddToQueueResponse
 {

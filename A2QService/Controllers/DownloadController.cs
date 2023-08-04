@@ -1,8 +1,8 @@
+using A2QService.Managers;
+using A2QService.Model;
 using Microsoft.AspNetCore.Mvc;
-using WebApplication1.Managers;
-using WebApplication1.Model;
 
-namespace WebApplication1.Controllers;
+namespace A2QService.Controllers;
 
 [ApiController]
 [Route("[controller]")]
