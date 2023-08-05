@@ -6,8 +6,9 @@ namespace A2QService.Managers;
 
 public class JobManager
 {
-    public ConfigManager ConfigManager { get; set; }
+    private ConfigManager ConfigManager { get; set; }
     private Queue<Job> JobQueue { get; } = new Queue<Job>();
+    
     public int TotalJobs => JobQueue.Count;
     
     public JobManager(ConfigManager configManager)
@@ -132,6 +133,7 @@ public class JobManager
 
             // Begin reading the output
             process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
 
             // Wait for the process to finish
             process.WaitForExit();
