@@ -6,6 +6,7 @@ namespace A2QService.Managers;
 
 public class JobManager
 {
+    private readonly Regex _progressRegex = new Regex(@"(\d*\.?\d+)?% of");
     private ConfigManager ConfigManager { get; set; }
     private Queue<Job> JobQueue { get; } = new Queue<Job>();
     
@@ -43,33 +44,30 @@ public class JobManager
 
     private void TryRunJob()
     {
-        // if there are no tasks in the queue, return
+        // if there are no jobs in the queue, return
         if (JobQueue.Count == 0)
         {
             return;
         }
 
-        // get the first task in the queue
+        // get the first job in the queue
         var job = JobQueue.Peek();
 
-        // if the task is already running, return
+        // if the job is already running, return
         if (job.Status == Job.StatusEnum.Running)
         {
             return;
         }
 
-        // start the task
-        job.Started = DateTime.Now;
-        job.Status = Job.StatusEnum.Running;
-
-        // run the task
+        // run the job
         RunJob(job);
     }
 
     private void RunJob(Job job)
     {
-        // regex
-        var regex = new Regex(@"(\d*\.?\d+)?% of");
+        // set states
+        job.Started = DateTime.Now;
+        job.Status = Job.StatusEnum.Running;
 
         // run task in new thread
         var task = Task.Run(() =>
@@ -113,7 +111,7 @@ public class JobManager
                     Console.WriteLine($"[{job.Id}] {output}");
                     
                     // check if the output contains a progress update
-                    var match = regex.Match(output);
+                    var match = _progressRegex.Match(output);
                     if (match.Success)
                     {
                         // get the progress
@@ -141,20 +139,20 @@ public class JobManager
             // Close the process
             process.Close();
 
-            // mark the task as finished
+            // mark the job as finished
             job.Finished = DateTime.Now;
             job.Status = Job.StatusEnum.Finished;
         });
         
-        // log message after task finished
+        // log message after job finished
         task.ContinueWith(t =>
         {
             Console.WriteLine($"[{job.Id}] Task finished");
             
-            // remove the task from the queue
+            // remove the job from the queue
             JobQueue.Dequeue();
 
-            // try to run the next task
+            // try to run the next job
             TryRunJob();
         });
     }

@@ -23,6 +23,8 @@ public class DownloadController : ControllerBase
     public AddToQueueResponse Get(string url)
     {
         var id = JobManager.AddJob(url);
+        _logger.Log(LogLevel.Information, "Added job {0} for {1}", id, url);
+        
         return new AddToQueueResponse() { Id = id };
     }
 }
