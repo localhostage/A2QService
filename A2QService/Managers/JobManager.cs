@@ -74,7 +74,7 @@ public class JobManager
         {
             var args =
                 $"-f bv+ba -P \"{ConfigManager.Config.DownloadPath}\" -P \"temp:tmp\" -P \"subtitle:subs\" --embed-subs --write-auto-sub --sub-lang \"en.*\" {job.Url}";
-                
+            
             // Create new process start info
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
@@ -83,7 +83,7 @@ public class JobManager
                 UseShellExecute = false, 
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                CreateNoWindow = true 
+                CreateNoWindow = true
             };
             
             startInfo.EnvironmentVariables["PATH"] += @$";{ConfigManager.Config.FfmpegPath}";
@@ -155,5 +155,15 @@ public class JobManager
             // try to run the next job
             TryRunJob();
         });
+    }
+
+    public List<Job> GetJobs()
+    {
+        return JobQueue.ToList();
+    }
+
+    public Job? GetJob(string jobId)
+    {
+        return JobQueue.FirstOrDefault(j => j.Id == jobId);
     }
 }
