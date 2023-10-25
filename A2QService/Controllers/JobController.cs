@@ -20,9 +20,9 @@ public class JobController : ControllerBase
 
     [HttpPost(template: "add", Name = "AddJob")]
     [Produces("application/json")]
-    public AddJobResponse AddJob(string url)
+    public AddJobResponse AddJob(string url, bool isPlaylist = false)
     {
-        var id = JobManager.AddJob(url);
+        var id = JobManager.AddJob(url, isPlaylist);
         _logger.Log(LogLevel.Information, "Added job {0} for {1}", id, url);
         
         return new AddJobResponse() { Id = id };

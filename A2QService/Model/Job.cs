@@ -14,6 +14,8 @@ public class Job
 
     public StatusEnum Status { get; set; } = StatusEnum.Waiting;
     
+    public bool IsPlaylist { get; set; }
+
     public enum StatusEnum
     {
         Waiting,

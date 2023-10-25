@@ -7,25 +7,29 @@ namespace A2QService.Managers;
 public class JobManager
 {
     private readonly Regex _progressRegex = new Regex(@"(\d*\.?\d+)?% of");
+    private readonly Regex _playlistProgressRegex = new Regex(@"Downloading item (\d+) of (\d+)");
+    private readonly Regex _downloadingRegex = new Regex(@"Extracting URL: (.*)");
+    
     private ConfigManager ConfigManager { get; set; }
     private Queue<Job> JobQueue { get; } = new Queue<Job>();
-    
+
     public int TotalJobs => JobQueue.Count;
-    
+
     public JobManager(ConfigManager configManager)
     {
         this.ConfigManager = configManager;
     }
 
-    public string AddJob(string url)
+    public string AddJob(string url, bool isPlaylist)
     {
-        Console.WriteLine("Adding job for {0}", url);
+        Console.WriteLine("Adding job for {0} [{1}]", url, isPlaylist);
 
         // generate a Task
         var job = new Job
         {
             Id = Guid.NewGuid().ToString(),
             Url = url,
+            IsPlaylist = isPlaylist,
             Created = DateTime.Now,
             Started = DateTime.MinValue,
             Finished = DateTime.MinValue,
@@ -72,20 +76,29 @@ public class JobManager
         // run task in new thread
         var task = Task.Run(() =>
         {
-            var args =
-                $"-f bv+ba -P \"{ConfigManager.Config.DownloadPath}\" -P \"temp:tmp\" -P \"subtitle:subs\" --embed-subs --write-auto-sub --sub-lang \"en.*\" {job.Url}";
-            
+            string args;
+            if (job.IsPlaylist)
+            {
+                args =
+                    $"-f bv+ba -P \"{ConfigManager.Config.DownloadPath}\" -P \"temp:tmp\" -P \"subtitle:subs\" --yes-playlist --embed-subs --write-auto-sub --sub-lang \"en.*\" \"{job.Url}\"";
+            }
+            else
+            {
+                args =
+                    $"-f bv+ba -P \"{ConfigManager.Config.DownloadPath}\" -P \"temp:tmp\" -P \"subtitle:subs\" --no-playlist --embed-subs --write-auto-sub --sub-lang \"en.*\" \"{job.Url}\"";
+            }
+
             // Create new process start info
             ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = ConfigManager.Config.YtDlPath,
-                Arguments = args, 
-                UseShellExecute = false, 
+                Arguments = args,
+                UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 CreateNoWindow = true
             };
-            
+
             startInfo.EnvironmentVariables["PATH"] += @$";{ConfigManager.Config.FfmpegPath}";
 
             // Create a new process 
@@ -108,21 +121,46 @@ public class JobManager
                 if (!string.IsNullOrEmpty(e.Data))
                 {
                     var output = e.Data;
-                    Console.WriteLine($"[{job.Id}] {output}");
+                    // Console.WriteLine($"[{job.Id}] {output}");
                     
-                    // check if the output contains a progress update
-                    var match = _progressRegex.Match(output);
-                    if (match.Success)
+                    // extractor
+                    var extractorMatch = _downloadingRegex.Match(output);
+                    if (extractorMatch.Success)
+                    {
+                        var extractor = extractorMatch.Groups[1].Value;
+                        Console.WriteLine($"[{job.Id}] URL: {extractor}");
+                    }
+
+                    // handle progress
+                    var downloadItemMatch = _playlistProgressRegex.Match(output);
+                    if (downloadItemMatch.Success)
+                    {
+                        var currentIndex = int.Parse(downloadItemMatch.Groups[1].Value);
+                        var totalIndex = int.Parse(downloadItemMatch.Groups[2].Value);
+                        Console.WriteLine($"[{job.Id}] Current Item: {{0}} / Total: {{1}}", currentIndex, totalIndex);
+                        
+                        var progress = (double) currentIndex / totalIndex * 100;       
+                        Console.WriteLine($"[{job.Id}] Overall Progress: {{0}}%", (int) progress);
+                    }  
+
+                    var progressMatch = _progressRegex.Match(output);
+                    if (progressMatch.Success)
                     {
                         // get the progress
-                        var progressStr = match.Groups[1].Value;
+                        var progressStr = progressMatch.Groups[1].Value;
                         if (double.TryParse(progressStr, out var progress))
                         {
                             // update the progress
-                            job.Progress = progress;
-                            Console.WriteLine("Progress: {0}", progress);
+                            if ((int)progress != (int)job.Progress)
+                            {
+                                job.Progress = progress;
+                                if (job.Progress % 5 == 0)
+                                {
+                                    Console.WriteLine($"[{job.Id}] - Progress: {progress}%");
+                                }
+                            }
                         }
-                    }
+                    }    
                 }
             };
 
@@ -143,12 +181,12 @@ public class JobManager
             job.Finished = DateTime.Now;
             job.Status = Job.StatusEnum.Finished;
         });
-        
+
         // log message after job finished
         task.ContinueWith(t =>
         {
             Console.WriteLine($"[{job.Id}] Task finished");
-            
+
             // remove the job from the queue
             JobQueue.Dequeue();
 
